@@ -1,7 +1,7 @@
 import metadata_detection
 import forensics
 import pathlib
-#hi im just testin
+
 if __name__ == "__main__":
 
     image_path = input("Please insert your image path: ")
