@@ -1,5 +1,6 @@
 import os
 from PIL import Image, ImageChops, ImageEnhance
+import cv2
 
 def perform_ela(image_path, quality=90):
     """
@@ -63,3 +64,10 @@ def analyze_metadata_anomaly(metadata_dict):
         red_flags.append("Anomaly: Image has software traces but missing camera hardware info.")
 
     return red_flags
+
+def blur_Detection(image_path):
+    image = cv2.imread(image_path)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+    
+    return blur_score

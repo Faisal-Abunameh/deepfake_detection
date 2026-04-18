@@ -1,10 +1,10 @@
-import metadata_detection
 import forensics
+import metadata_detection
 import pathlib
 
 if __name__ == "__main__":
 
-    image_path = input("Please insert your image path: ")
+    image_path = input("Please insert your image path: ").strip(' "\'')
     #image_path = pathlib.Path(r"C:\Users\faisa\Downloads\t7ccN51j9LinZJvRFxlQxN9W5foq_z2w.jpeg")
     base_path = pathlib.Path(__file__).parent    
     print(f"==================================================")
@@ -48,5 +48,14 @@ if __name__ == "__main__":
     else:
         print("\nERROR: Could not perform ELA.")
     
+    # 3. PERFORM BLUR DETECTION
+    print("\n" + "="*50)
+    print("[STEP 3] Performing Blur Detection...")
+    blur_score = forensics.blur_Detection(image_path)
+    print(f"\nBlur Score: {blur_score}")
+    print("\nHOW TO INTERPRET:")
+    print("-----------------")
+    print("- High blur score: Image is likely authentic (typically over 100 depending on the image size).")
+    print("- Low blur score: Image may be a deepfake (typically under 100 depending on the image size).")
     print("\n" + "="*50)
     print("ANALYSIS COMPLETE.")
