@@ -1,5 +1,4 @@
 import forensics
-import metadata_detection
 import pathlib
 
 if __name__ == "__main__":
