@@ -1,12 +1,31 @@
-import metadata_detection
 import forensics
 import pathlib
+import sys
 
 if __name__ == "__main__":
 
-    image_path = input("Please insert your image path: ")
+    image_path = input("Please insert your image path: ").strip(' "\'')
     #image_path = pathlib.Path(r"C:\Users\faisa\Downloads\t7ccN51j9LinZJvRFxlQxN9W5foq_z2w.jpeg")
     base_path = pathlib.Path(__file__).parent    
+    results_path = base_path / "results"
+    
+    if not results_path.exists():
+        results_path.mkdir()
+
+    # Redirect output to file as well
+    class Logger(object):
+        def __init__(self, filename):
+            self.terminal = sys.stdout
+            self.log = open(filename, "w", encoding="utf-8")
+        def write(self, message):
+            self.terminal.write(message)
+            self.log.write(message)
+        def flush(self):
+            self.terminal.flush()
+            self.log.flush()
+
+    sys.stdout = Logger(results_path / "output.txt")
+
     print(f"==================================================")
     print(f"--- DEEPFAKE DETECTION SYSTEM: EXTENDED MODE ---")
     print(f"==================================================\n")
@@ -14,7 +33,7 @@ if __name__ == "__main__":
     
     # 1. ANALYZE METADATA
     print("[STEP 1] Extracting and Analyzing Metadata...")
-    metadata = metadata_detection.get_metadata(image_path)
+    metadata = forensics.get_metadata(image_path)
     
     if metadata:
         anomalies = forensics.analyze_metadata_anomaly(metadata)
@@ -48,5 +67,14 @@ if __name__ == "__main__":
     else:
         print("\nERROR: Could not perform ELA.")
     
+    # 3. PERFORM BLUR DETECTION
+    print("\n" + "="*50)
+    print("[STEP 3] Performing Blur Detection...")
+    blur_score = forensics.blur_Detection(image_path)
+    print(f"\nBlur Score: {blur_score}")
+    print("\nHOW TO INTERPRET:")
+    print("-----------------")
+    print("- High blur score: Image is likely authentic (typically over 100 depending on the image size).")
+    print("- Low blur score: Image may be a deepfake (typically under 100 depending on the image size).")
     print("\n" + "="*50)
     print("ANALYSIS COMPLETE.")
