@@ -1,11 +1,31 @@
 import forensics
 import pathlib
+import sys
 
 if __name__ == "__main__":
 
     image_path = input("Please insert your image path: ").strip(' "\'')
     #image_path = pathlib.Path(r"C:\Users\faisa\Downloads\t7ccN51j9LinZJvRFxlQxN9W5foq_z2w.jpeg")
     base_path = pathlib.Path(__file__).parent    
+    results_path = base_path / "results"
+    
+    if not results_path.exists():
+        results_path.mkdir()
+
+    # Redirect output to file as well
+    class Logger(object):
+        def __init__(self, filename):
+            self.terminal = sys.stdout
+            self.log = open(filename, "w", encoding="utf-8")
+        def write(self, message):
+            self.terminal.write(message)
+            self.log.write(message)
+        def flush(self):
+            self.terminal.flush()
+            self.log.flush()
+
+    sys.stdout = Logger(results_path / "output.txt")
+
     print(f"==================================================")
     print(f"--- DEEPFAKE DETECTION SYSTEM: EXTENDED MODE ---")
     print(f"==================================================\n")
@@ -13,7 +33,7 @@ if __name__ == "__main__":
     
     # 1. ANALYZE METADATA
     print("[STEP 1] Extracting and Analyzing Metadata...")
-    metadata = metadata_detection.get_metadata(image_path)
+    metadata = forensics.get_metadata(image_path)
     
     if metadata:
         anomalies = forensics.analyze_metadata_anomaly(metadata)
