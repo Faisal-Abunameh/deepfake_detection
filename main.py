@@ -1,6 +1,7 @@
 import forensics
 import pathlib
 import sys
+import cnn_model
 
 if __name__ == "__main__":
 
@@ -76,5 +77,15 @@ if __name__ == "__main__":
     print("-----------------")
     print("- High blur score: Image is likely authentic (typically over 100 depending on the image size).")
     print("- Low blur score: Image may be a deepfake (typically under 100 depending on the image size).")
+    print("\n" + "="*50)
+    
+    # 4. PERFORM CNN CLASSIFICATION
+    print("[STEP 4] Performing CNN Classification...")
+    try:
+        model_path = base_path / "deepfake_cnn_model.pth"
+        cnn_model.predict_image(image_path, str(model_path))
+    except Exception as e:
+        print(f"\n[!] Could not perform CNN classification: {e}")
+
     print("\n" + "="*50)
     print("ANALYSIS COMPLETE.")
