@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
+from torchvision import datasets, transforms, models
 from torch.utils.data import DataLoader
 from pathlib import Path
 import sys
@@ -47,37 +47,23 @@ def get_dataloaders():
 class DeepfakeCNN(nn.Module):
     def __init__(self):
         super(DeepfakeCNN, self).__init__()
-        # Convolutional layers
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
-        
-        # Fully connected layers
-        # After 3 max pools of 2x2, a 256x256 image becomes 32x32
-        # So input to fc1 is 128 channels * 32 * 32
-        self.fc1 = nn.Linear(128 * 32 * 32, 512)
-        self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(512, 2)  # 2 classes: Fake vs Real
-        
-        self.relu = nn.ReLU()
+        # Use a pre-trained ResNet50
+        try:
+            self.resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        except AttributeError:
+            self.resnet = models.resnet50(pretrained=True)
+            
+        # Replace the final fully connected layer for binary classification
+        num_ftrs = self.resnet.fc.in_features
+        self.resnet.fc = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(num_ftrs, 2)
+        )
 
     def forward(self, x):
-        # Apply conv -> relu -> pool
-        x = self.pool(self.relu(self.conv1(x)))
-        x = self.pool(self.relu(self.conv2(x)))
-        x = self.pool(self.relu(self.conv3(x)))
-        
-        # Flatten the output for the fully connected layer
-        x = x.view(-1, 128 * 32 * 32)
-        
-        # Apply fully connected layers
-        x = self.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
-        return x
+        return self.resnet(x)
 
-def predict_image(image_path, model_path="deepfake_cnn_model.pth"):
+def predict_image(image_path, model_path="resnet50.pth"):
     from PIL import Image
     import os
     
@@ -284,5 +270,5 @@ if __name__ == "__main__":
         print("[!] Install it using: pip install matplotlib")
 
     # --- 5. Save the Model ---
-    torch.save(model.state_dict(), "deepfake_cnn_model.pth")
-    print("\nModel saved to 'deepfake_cnn_model.pth'")
+    torch.save(model.state_dict(), "resnet50.pth")
+    print("\nModel saved to 'resnet50.pth'")
