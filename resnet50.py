@@ -14,7 +14,7 @@ LEARNING_RATE = 0.001
 IMAGE_SIZE = (256, 256)  # Resize all images to 256x256
 
 # Device configuration (use GPU if available)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda')
 print(f"Using device: {device}")
 
 # --- 1. Data Preparation ---
