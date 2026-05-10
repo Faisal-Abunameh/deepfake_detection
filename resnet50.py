@@ -5,6 +5,7 @@ from torchvision import datasets, transforms, models
 from torch.utils.data import DataLoader
 from pathlib import Path
 import sys
+import time
 
 # --- Configuration ---
 DATASET_PATH = Path("Dataset")
@@ -102,6 +103,14 @@ def predict_image(image_path, model_path="resnet50.pth"):
         return result_label, conf_score
 
 if __name__ == "__main__":
+    print("\n" + "="*40)
+    print("--- HYPERPARAMETERS ---")
+    print(f"Batch Size:    {BATCH_SIZE}")
+    print(f"Epochs:        {EPOCHS}")
+    print(f"Learning Rate: {LEARNING_RATE}")
+    print(f"Image Size:    {IMAGE_SIZE}")
+    print("="*40 + "\n")
+
     train_loader, val_loader, test_loader, classes = get_dataloaders()
     
     # Initialize model, loss function, and optimizer
@@ -109,13 +118,33 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+    start_epoch = 0
+    history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
+    checkpoint_path = Path("training_checkpoint.pth")
+    if checkpoint_path.exists():
+        print(f"Resuming training from checkpoint: {checkpoint_path}")
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            start_epoch = checkpoint['epoch'] + 1
+            if 'history' in checkpoint:
+                history = checkpoint['history']
+            print(f"Resuming at epoch {start_epoch + 1}")
+        except Exception as e:
+            print(f"Could not load checkpoint: {e}")
+
     # --- 3. Training Loop ---
     print("\nStarting Training...")
     log_file_path = Path("training_log.txt")
-    with open(log_file_path, "w") as log_file:
-        log_file.write("--- CNN Training Log ---\n")
+    with open(log_file_path, "a" if start_epoch > 0 else "w") as log_file:
+        if start_epoch == 0:
+            log_file.write("--- CNN Training Log ---\n")
         
-    for epoch in range(EPOCHS):
+    total_start_time = time.time()
+    
+    for epoch in range(start_epoch, EPOCHS):
+        epoch_start_time = time.time()
         model.train()
         running_loss = 0.0
         correct = 0
@@ -177,14 +206,31 @@ if __name__ == "__main__":
                 
         val_acc = 100 * val_correct / val_total
         
-        log_msg = (f"Epoch [{epoch+1}/{EPOCHS}] Summary - "
+        epoch_duration = time.time() - epoch_start_time
+        mins, secs = divmod(epoch_duration, 60)
+        
+        log_msg = (f"Epoch [{epoch+1}/{EPOCHS}] Summary (Time: {int(mins)}m {int(secs)}s) - "
                    f"Train Loss: {running_loss/num_batches:.4f}, Train Acc: {train_acc:.2f}% | "
                    f"Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {val_acc:.2f}%")
         print(log_msg)
         
+        # Update history
+        history['train_loss'].append(running_loss / num_batches)
+        history['train_acc'].append(train_acc)
+        history['val_loss'].append(val_loss / len(val_loader))
+        history['val_acc'].append(val_acc)
+
         # Save log to file
         with open(log_file_path, "a") as log_file:
             log_file.write(log_msg + "\n")
+            
+        # Save checkpoint
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'history': history,
+        }, checkpoint_path)
 
     # --- 4. Testing Phase ---
     print("\nEvaluating on Test Set...")
@@ -265,10 +311,65 @@ if __name__ == "__main__":
         plt.tight_layout()
         plt.savefig("confusion_matrix.png", dpi=300)
         print("Saved confusion matrix image to 'confusion_matrix.png'")
+        
+        # Plot Training & Validation Loss
+        plt.figure(figsize=(8, 5))
+        plt.plot(history['train_loss'], label='Train Loss')
+        plt.plot(history['val_loss'], label='Val Loss')
+        plt.title('Model Loss Over Epochs')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('loss_curve.png', dpi=300)
+        print("Saved loss curve image to 'loss_curve.png'")
+        
+        # Plot Training & Validation Accuracy
+        plt.figure(figsize=(8, 5))
+        plt.plot(history['train_acc'], label='Train Acc')
+        plt.plot(history['val_acc'], label='Val Acc')
+        plt.title('Model Accuracy Over Epochs')
+        plt.ylabel('Accuracy (%)')
+        plt.xlabel('Epoch')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('accuracy_curve.png', dpi=300)
+        print("Saved accuracy curve image to 'accuracy_curve.png'")
+
+        # 1. Test Set Class Distribution (Pie Chart)
+        actual_fake_count = sum(1 for label in all_labels if label == 0)
+        actual_real_count = sum(1 for label in all_labels if label == 1)
+        plt.figure(figsize=(6, 6))
+        plt.pie([actual_fake_count, actual_real_count], labels=['Fake', 'Real'], autopct='%1.1f%%', colors=['lightcoral', 'lightskyblue'], startangle=140)
+        plt.title('Test Set Class Distribution (Actual)')
+        plt.savefig('test_distribution_pie.png', dpi=300)
+        print("Saved test distribution pie chart to 'test_distribution_pie.png'")
+
+        # 2. Model Predictions Summary (Bar Chart)
+        pred_fake_count = sum(1 for pred in all_preds if pred == 0)
+        pred_real_count = sum(1 for pred in all_preds if pred == 1)
+        plt.figure(figsize=(7, 5))
+        plt.bar(['Predicted Fake', 'Predicted Real'], [pred_fake_count, pred_real_count], color=['lightcoral', 'lightskyblue'])
+        plt.title('Model Predictions Summary')
+        plt.ylabel('Number of Images')
+        for i, v in enumerate([pred_fake_count, pred_real_count]):
+            plt.text(i, v + (max(pred_fake_count, pred_real_count)*0.01), str(v), ha='center', va='bottom')
+        plt.savefig('predictions_bar_chart.png', dpi=300)
+        print("Saved prediction summary bar chart to 'predictions_bar_chart.png'")
+        
     except ImportError:
-        print("[!] matplotlib is not installed. Could not save confusion matrix image.")
-        print("[!] Install it using: pip install matplotlib")
+        print("[!] matplotlib is not installed. Could not save charts.")
 
     # --- 5. Save the Model ---
     torch.save(model.state_dict(), "resnet50.pth")
     print("\nModel saved to 'resnet50.pth'")
+    
+    # Clean up checkpoint since training is fully complete
+    if checkpoint_path.exists():
+        import os
+        os.remove(checkpoint_path)
+        
+    total_duration = time.time() - total_start_time
+    total_mins, total_secs = divmod(total_duration, 60)
+    total_hours, total_mins = divmod(total_mins, 60)
+    print(f"\n--- Total Training & Evaluation Time: {int(total_hours)}h {int(total_mins)}m {int(total_secs)}s ---")
