@@ -45,43 +45,51 @@ def get_dataloaders():
         exit()
 
 # --- 2. CNN Model Definition ---
-class DeepfakeVGG16(nn.Module):
+class DeepfakeRNN(nn.Module):
     def __init__(self):
-        super(DeepfakeVGG16, self).__init__()
-        # Use a pre-trained VGG16
-        try:
-            self.vgg = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
-        except AttributeError:
-            self.vgg = models.vgg16(pretrained=True)
-            
-        # Replace the final fully connected layer for binary classification
-        num_ftrs = self.vgg.classifier[6].in_features
-        self.vgg.classifier[6] = nn.Sequential(
+        super(DeepfakeRNN, self).__init__()
+        # Input size: 3 channels * 224 width = 672
+        # Sequence length: 224 (height)
+        self.input_size = 3 * 224
+        self.hidden_size = 128
+        self.num_layers = 2
+        
+        self.rnn = nn.RNN(input_size=self.input_size, 
+                          hidden_size=self.hidden_size, 
+                          num_layers=self.num_layers, 
+                          batch_first=True,
+                          dropout=0.5 if self.num_layers > 1 else 0)
+        
+        self.fc = nn.Sequential(
             nn.Dropout(0.5),
-            nn.Linear(num_ftrs, 2)
+            nn.Linear(self.hidden_size, 2)
         )
 
     def forward(self, x):
-        return self.vgg(x)
+        batch_size = x.size(0)
+        x = x.view(batch_size, 224, -1)
+        out, _ = self.rnn(x)
+        out = self.fc(out[:, -1, :])
+        return out
 
-def predict_image(image_path, model_path="vgg16.pth"):
+def predict_image(image_path, model_path="rnn.pth"):
     from PIL import Image
     import os
     
     if not os.path.exists(model_path):
         print(f"\n[!] Model file '{model_path}' not found.")
-        print("[!] Please train the CNN model first by running: python vgg16.py")
+        print("[!] Please train the RNN model first by running: python vgg16.py")
         return None
         
     try:
         img = Image.open(image_path).convert('RGB')
     except Exception as e:
-        print(f"\n[!] Error opening image for CNN: {e}")
+        print(f"\n[!] Error opening image for RNN: {e}")
         return None
         
     img_tensor = transform(img).unsqueeze(0).to(device)
     
-    model = DeepfakeVGG16().to(device)
+    model = DeepfakeRNN().to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     
@@ -97,7 +105,7 @@ def predict_image(image_path, model_path="vgg16.pth"):
         
         result_label = "Real" if class_idx == 1 else "Fake"
         
-        print(f"\nCNN Classification: {result_label} (Confidence: {conf_score:.2f}%)")
+        print(f"\nRNN Classification: {result_label} (Confidence: {conf_score:.2f}%)")
         return result_label, conf_score
 
 if __name__ == "__main__":
@@ -112,13 +120,13 @@ if __name__ == "__main__":
     train_loader, val_loader, test_loader, classes = get_dataloaders()
     
     # Initialize model, loss function, and optimizer
-    model = DeepfakeVGG16().to(device)
+    model = DeepfakeRNN().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     start_epoch = 0
     history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
-    checkpoint_path = Path("vgg16_training_checkpoint.pth")
+    checkpoint_path = Path("training_checkpoint.pth")
     if checkpoint_path.exists():
         print(f"Resuming training from checkpoint: {checkpoint_path}")
         try:
@@ -134,10 +142,10 @@ if __name__ == "__main__":
 
     # --- 3. Training Loop ---
     print("\nStarting Training...")
-    log_file_path = Path("vgg16_training_log.txt")
+    log_file_path = Path("training_log.txt")
     with open(log_file_path, "a" if start_epoch > 0 else "w") as log_file:
         if start_epoch == 0:
-            log_file.write("--- VGG16 Training Log ---\n")
+            log_file.write("--- RNN Training Log ---\n")
         
     total_start_time = time.time()
     
@@ -296,7 +304,7 @@ if __name__ == "__main__":
             ax.text(j, i, f'{z}', ha='center', va='center', fontsize=12,
                     bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.3'))
         
-        plt.title('Confusion Matrix (VGG16)', pad=20)
+        plt.title('Confusion Matrix', pad=20)
         plt.ylabel('Actual')
         plt.xlabel('Predicted')
         
@@ -307,32 +315,32 @@ if __name__ == "__main__":
         ax.xaxis.set_ticks_position('bottom')
         
         plt.tight_layout()
-        plt.savefig("vgg16_confusion_matrix.png", dpi=300)
-        print("Saved confusion matrix image to 'vgg16_confusion_matrix.png'")
+        plt.savefig("confusion_matrix.png", dpi=300)
+        print("Saved confusion matrix image to 'confusion_matrix.png'")
         
         # Plot Training & Validation Loss
         plt.figure(figsize=(8, 5))
         plt.plot(history['train_loss'], label='Train Loss')
         plt.plot(history['val_loss'], label='Val Loss')
-        plt.title('Model Loss Over Epochs (VGG16)')
+        plt.title('Model Loss Over Epochs')
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend()
         plt.grid(True)
-        plt.savefig('vgg16_loss_curve.png', dpi=300)
-        print("Saved loss curve image to 'vgg16_loss_curve.png'")
+        plt.savefig('loss_curve.png', dpi=300)
+        print("Saved loss curve image to 'loss_curve.png'")
         
         # Plot Training & Validation Accuracy
         plt.figure(figsize=(8, 5))
         plt.plot(history['train_acc'], label='Train Acc')
         plt.plot(history['val_acc'], label='Val Acc')
-        plt.title('Model Accuracy Over Epochs (VGG16)')
+        plt.title('Model Accuracy Over Epochs')
         plt.ylabel('Accuracy (%)')
         plt.xlabel('Epoch')
         plt.legend()
         plt.grid(True)
-        plt.savefig('vgg16_accuracy_curve.png', dpi=300)
-        print("Saved accuracy curve image to 'vgg16_accuracy_curve.png'")
+        plt.savefig('accuracy_curve.png', dpi=300)
+        print("Saved accuracy curve image to 'accuracy_curve.png'")
 
         # 1. Test Set Class Distribution (Pie Chart)
         actual_fake_count = sum(1 for label in all_labels if label == 0)
@@ -340,27 +348,27 @@ if __name__ == "__main__":
         plt.figure(figsize=(6, 6))
         plt.pie([actual_fake_count, actual_real_count], labels=['Fake', 'Real'], autopct='%1.1f%%', colors=['lightcoral', 'lightskyblue'], startangle=140)
         plt.title('Test Set Class Distribution (Actual)')
-        plt.savefig('vgg16_test_distribution_pie.png', dpi=300)
-        print("Saved test distribution pie chart to 'vgg16_test_distribution_pie.png'")
+        plt.savefig('test_distribution_pie.png', dpi=300)
+        print("Saved test distribution pie chart to 'test_distribution_pie.png'")
 
         # 2. Model Predictions Summary (Bar Chart)
         pred_fake_count = sum(1 for pred in all_preds if pred == 0)
         pred_real_count = sum(1 for pred in all_preds if pred == 1)
         plt.figure(figsize=(7, 5))
         plt.bar(['Predicted Fake', 'Predicted Real'], [pred_fake_count, pred_real_count], color=['lightcoral', 'lightskyblue'])
-        plt.title('Model Predictions Summary (VGG16)')
+        plt.title('Model Predictions Summary')
         plt.ylabel('Number of Images')
         for i, v in enumerate([pred_fake_count, pred_real_count]):
             plt.text(i, v + (max(pred_fake_count, pred_real_count)*0.01), str(v), ha='center', va='bottom')
-        plt.savefig('vgg16_predictions_bar_chart.png', dpi=300)
-        print("Saved prediction summary bar chart to 'vgg16_predictions_bar_chart.png'")
+        plt.savefig('predictions_bar_chart.png', dpi=300)
+        print("Saved prediction summary bar chart to 'predictions_bar_chart.png'")
         
     except ImportError:
         print("[!] matplotlib is not installed. Could not save charts.")
 
     # --- 5. Save the Model ---
-    torch.save(model.state_dict(), "vgg16.pth")
-    print("\nModel saved to 'vgg16.pth'")
+    torch.save(model.state_dict(), "rnn.pth")
+    print("\nModel saved to 'rnn.pth'")
     
     # Clean up checkpoint since training is fully complete
     if checkpoint_path.exists():
