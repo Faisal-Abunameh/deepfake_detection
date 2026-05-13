@@ -12,7 +12,7 @@ DATASET_PATH = Path("Dataset")
 BATCH_SIZE = 32
 EPOCHS = 10
 LEARNING_RATE = 0.001
-IMAGE_SIZE = (224, 224)  # Standard image size for VGG16
+IMAGE_SIZE = (224, 224)  # Standard image size for RNN
 
 # Device configuration (use GPU if available)
 device = torch.device('cuda')
@@ -44,7 +44,7 @@ def get_dataloaders():
         print("Please ensure your 'Dataset' folder contains 'Train', 'Validation', and 'Test' subfolders.")
         exit()
 
-# --- 2. CNN Model Definition ---
+# --- 2. RNN Model Definition ---
 class DeepfakeRNN(nn.Module):
     def __init__(self):
         super(DeepfakeRNN, self).__init__()
@@ -78,7 +78,7 @@ def predict_image(image_path, model_path="rnn.pth"):
     
     if not os.path.exists(model_path):
         print(f"\n[!] Model file '{model_path}' not found.")
-        print("[!] Please train the RNN model first by running: python vgg16.py")
+        print("[!] Please train the RNN model first by running: python rnn.py")
         return None
         
     try:
