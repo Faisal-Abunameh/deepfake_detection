@@ -58,7 +58,7 @@ We evaluated both architectures on the exact same 10,904-image Test Set. The res
 - **Test Accuracy**: **58.49%**
 - **F1-Score**: **0.5964**
 - **Analysis**: Even after 100 epochs, the RNN struggled to generalize, hovering only slightly above random guessing (58%). This illustrates a key computer vision principle: forcing a sequential model (RNN) to read a 2D image row-by-row strips away the vertical spatial context. Deepfake artifacts are inherently spatial 2D anomalies, making the RNN poorly suited for this specific task compared to a CNN.
-![RNN Confusion Matrix](rnn_epochs/confusion_matrix.png)
+![RNN Confusion Matrix](rnn/confusion_matrix.png)
 
 ## Usage
 
