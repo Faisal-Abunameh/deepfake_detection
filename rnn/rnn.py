@@ -9,14 +9,13 @@ import time
 
 # --- Configuration ---
 DATASET_PATH = Path("Dataset")
-BATCH_SIZE = 32
-EPOCHS = 10
-LEARNING_RATE = 0.001
+BATCH_SIZE = 16
+EPOCHS = 100
+LEARNING_RATE = 0.00001
 IMAGE_SIZE = (224, 224)  # Standard image size for RNN
 
 # Device configuration (use GPU if available)
 device = torch.device('cuda')
-print(f"Using device: {device}")
 
 # --- 1. Data Preparation ---
 # Define image transformations (resizing, converting to tensor, and normalizing)
