@@ -1,13 +1,23 @@
-import forensics
-import pathlib
 import sys
-import resnet50
+import pathlib
+import warnings
+
+# Suppress PyTorch FutureWarnings
+warnings.filterwarnings("ignore")
+
+base_path = pathlib.Path(__file__).parent
+import forensics
+from resnet50 import resnet50 as resnet_model
+from rnn import rnn as rnn_model
+
+import torch
 
 if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
 
     image_path = input("Please insert your image path: ").strip(' "\'')
     #image_path = pathlib.Path(r"C:\Users\faisa\Downloads\t7ccN51j9LinZJvRFxlQxN9W5foq_z2w.jpeg")
-    base_path = pathlib.Path(__file__).parent    
     results_path = base_path / "results"
     
     if not results_path.exists():
@@ -79,13 +89,22 @@ if __name__ == "__main__":
     print("- Low blur score: Image may be a deepfake (typically under 100 depending on the image size).")
     print("\n" + "="*50)
     
-    # 4. PERFORM CNN CLASSIFICATION
-    print("[STEP 4] Performing CNN Classification...")
+    # 4. PERFORM AI CLASSIFICATION (RESNET & RNN)
+    print("[STEP 4] Performing AI Classification...")
+    
+    print("\n--- ResNet Analysis ---")
     try:
-        model_path = base_path / "resnet50.pth"
-        resnet50.predict_image(image_path, str(model_path))
+        resnet_model_path = base_path / "resnet50" / "resnet50.pth"
+        resnet_model.predict_image(image_path, str(resnet_model_path))
     except Exception as e:
-        print(f"\n[!] Could not perform CNN classification: {e}")
+        print(f"[!] Could not perform ResNet50 classification: {e}")
+
+    print("\n--- RNN Analysis ---")
+    try:
+        rnn_model_path = base_path / "rnn" / "rnn.pth"
+        rnn_model.predict_image(image_path, str(rnn_model_path))
+    except Exception as e:
+        print(f"[!] Could not perform RNN classification: {e}")
 
     print("\n" + "="*50)
     print("ANALYSIS COMPLETE.")
