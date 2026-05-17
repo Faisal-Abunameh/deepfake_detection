@@ -9,6 +9,7 @@ base_path = pathlib.Path(__file__).parent
 import forensics
 from resnet50 import resnet50 as resnet_model
 from rnn import rnn as rnn_model
+from densenet121 import densenet as densenet_model
 
 import torch
 
@@ -105,6 +106,13 @@ if __name__ == "__main__":
         rnn_model.predict_image(image_path, str(rnn_model_path))
     except Exception as e:
         print(f"[!] Could not perform RNN classification: {e}")
+
+    print("\n--- DenseNet Analysis ---")
+    try:
+        densenet_model_path = base_path / "densenet121" / "densenet.pth"
+        densenet_model.predict_image(image_path, str(densenet_model_path))
+    except Exception as e:
+        print(f"[!] Could not perform DenseNet classification: {e}")
 
     print("\n" + "="*50)
     print("ANALYSIS COMPLETE.")
