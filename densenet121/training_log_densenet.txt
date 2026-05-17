@@ -1,0 +1,38 @@
+========================================
+--- HYPERPARAMETERS ---
+Batch Size:    16
+Epochs:        2
+Learning Rate: 0.0001
+Image Size:    (224, 224)
+========================================
+
+Classes: ['Fake', 'Real']
+
+Starting Training...
+Epoch [1/2] |██████████████████████████████| 100.0% - Loss: 0.0698, Acc: 97.26% 
+Epoch [1/2] Summary (Time: 518m 43s) - Train Loss: 0.0698, Train Acc: 97.26% | Val Loss: 0.0719, Val Acc: 97.07%
+Epoch [2/2] |██████████████████████████████| 100.0% - Loss: 0.0399, Acc: 98.43% 
+Epoch [2/2] Summary (Time: 489m 22s) - Train Loss: 0.0399, Train Acc: 98.43% | Val Loss: 0.0606, Val Acc: 97.77%
+
+Evaluating on Test Set...
+
+========================================
+TESTING RESULTS
+========================================
+Final Test Accuracy: 91.68%
+
+--- Confusion Matrix ---
+                    Predicted Fake (0) | Predicted Real (1)
+Actual Fake (0)   | 5289               | 202
+Actual Real (1)   | 705                | 4708
+
+--- Detailed Metrics ---
+Precision: 0.9589 (When it predicts Real, how often is it correct?)
+Recall:    0.8698 (Out of all actual Reals, how many did it find?)
+F1-Score:  0.9121 (Harmonic mean of Precision and Recall)
+===================================
+
+
+Model saved to 'densenet.pth'
+
+--- Total Training & Evaluation Time: 17h 0m 22s ---
